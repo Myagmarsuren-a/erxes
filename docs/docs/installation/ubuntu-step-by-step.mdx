@@ -300,13 +300,11 @@ sudo systemctl enable mongod
 
 #Created symlink /etc/systemd/system/multi-user.target.wants/mongod.service → /lib/systemd/system/mongod.service.
 ```
-
 - Check to see if **MongoDB** is installed correctly
 
 ```bash
 mongod --version
 ```
-
 As long as you received a version response to `mongod --version`, then you can continue below.
 
 ### Deploy a MongoDB Replica Set
@@ -345,6 +343,32 @@ Connect to mongo shell
 ```bash
 mongo
 ```
+If you have any trouble to connect mongo shell check the status with following command
+```bash
+systemctl status mongod
+```
+if it returns something like below
+```bash
+● mongod.service - MongoDB Database Server
+     Loaded: loaded (/lib/systemd/system/mongod.service; enabled; vendor preset: enabled)
+     Active: failed (Result: exit-code) since Wed 2021-02-03 15:59:18 +08; 9s ago
+       Docs: https://docs.mongodb.org/manual
+    Process: 51201 ExecStart=/usr/bin/mongod --config /etc/mongod.conf (code=exited, status=14)
+   Main PID: 51201 (code=exited, status=14)
+
+2nd month 03 15:59:18 erxes systemd[1]: Started MongoDB Database Server.
+2nd month 03 15:59:18 erxes systemd[1]: mongod.service: Main process exited, code=exited, status=14>
+2nd month 03 15:59:18 erxes systemd[1]: mongod.service: Failed with result 'exit-code'.
+```
+Please change permissions on following directories with commands shown below
+```bash
+chown -R mongodb:mongodb /var/lib/mongodb
+chown mongodb:mongodb /tmp/mongodb-27017.sock
+
+sudo service mongod restart
+```
+After this you should able to connect mongo shell without problem.
+
 
 Initialize replicaSet
 
@@ -535,6 +559,35 @@ server {
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_http_version 1.1;
         }
+	# erxes dashboard front is running on 4200 port.
+	location /dashboard/front {
+                access_log /var/log/nginx/erxes-integrations.access.log;
+                error_log /var/log/nginx/erxes-integrations.error.log;
+                proxy_pass http://127.0.0.1:4200;
+                proxy_http_version 1.1;
+                proxy_redirect off;
+                proxy_set_header Host $http_host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-Host $host;
+                proxy_set_header X-Forwarded-Server $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+        }
+	# erxes dashboard api is running on 4300 port.
+	location /dashboard/api/ {
+                access_log /var/log/nginx/erxes-integrations.access.log;
+                error_log /var/log/nginx/erxes-integrations.error.log;
+                proxy_pass http://127.0.0.1:4300/;
+                proxy_http_version 1.1;
+                proxy_redirect off;
+                proxy_set_header Host $http_host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-Host $host;
+                proxy_set_header X-Forwarded-Server $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
 }
 ```
 
